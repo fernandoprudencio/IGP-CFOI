@@ -1,59 +1,31 @@
+#'@author  Fernando Prudencio
+#'this script filter mod09a1 dataset
+#'installing packages
+rm(list = ls())
+pkg <- c('DescTools', 'dplyr', 'raster', 'dfcrm')
+sapply(pkg, function(x){ if(x %in% rownames(installed.packages()) == FALSE) { install.packages(x) }})
 
 library(DescTools)
 library(dplyr)
 library(raster)
+#'reading functions
+load('scripts/functions.R')
 
-rm(list = ls())
+#'links
+rutIN  <- 'G:/data/mod09a1/withoutFILTER/'
+rutOUT <- 'G:/data/mod09a1/withFILTER/'
 
-setwd('H:/completo/NDWI/')
-rutOUT<-'H:/completo/NDWI/FILTER/'
-rutIN<-'H:/completo/NDWI/'
+#'this is the order of 16 bits of the quality band
+# (15)(14)(13)(12)(11)(10)(09)(08)(07)(06)(05)(04)(03)(02)(01)(00) - MODIS NOMENCLATURE
+# (01)(02)(03)(04)(05)(06)(07)(08)(09)(10)(11)(12)(13)(14)(15)(16) - R NOMENCLATURE
 
-#----------------------------------------------------
+filter <- list(c('01','10'), NA, c('000', '010', '011', '100', '101', '110', '111'),
+                 "11", NA, '1', NA, '1', '1', NA, '1')
+#'list of qa and reflectivity data
+band_list <- list.files(rutIN, pattern = 'refl_b02', full.names = T)
+qa_list   <- list.files(rutIN, pattern = 'state', full.names = T)
 
-dataBIN<-DecToBin(c(1:65535))
-for (i in 1:length(dataBIN)) {
-  nceros=16-nchar(dataBIN[i])
-  dataBIN[i]=paste(substr('000000000000000',1,nceros),dataBIN[i],sep = '')
-  
-}
-
-
-dataBIN_DF<-data.frame(bin=dataBIN)%>%mutate(dec=c(1:length(bin)))%>%
-  filter(substr(bin ,11,13) == "000" | substr(bin ,11,13) == "010" | substr(bin ,11,13) == "011" |substr(bin ,11,13) == "100" |
-           substr(bin ,11,13) == "101" | substr(bin ,11,13) == "110" |substr(bin ,11,13) == "111" | #AGUA
-           substr(bin ,15,16) == "01" | substr(bin ,15,16) == "10"| #NUBES
-           substr(bin ,6,6) == "1"|  #ALGORITMO DE NUBE
-           substr(bin ,9,10) == "11"|#AEROSOLES
-           substr(bin ,1,1) == "1"|#NIEVE
-           substr(bin ,4,4) == "1"|#NIEVE/HIELO
-           substr(bin ,3,3) == "1"#PIXEL ADYACENTE A LA NUBE
-  )
-
-
-#--------------------------------------------------------------------------------------------------------------------#
-
-
-QA_rut<-list.files(pattern='state',full.names = T)
-band_rut<-list.files(paste(rutIN),pattern = 'NDWI',full.names = T)
-
-for (k in 1:782) {
-  print(k)
-  print(date())
-  #NOMBRE DEL NUEVO ARCHIVO DE NDWI
-  name = list.files(pattern='state')[k]%>%substr(36,42)
-  #LLAMANDO A LAS BANDAS QA Y NDWI
-  QA = raster(QA_rut[k])
-  band = raster(band_rut[k])
-  #BANDA QA A VALORES DE 1 Y NA
-  QA[QA%in%dataBIN_DF$dec] = NA
-  QA[!is.na(QA)] = 1
-  #FILTRANDO LOS NDWI
-  BAND_FILT = band*QA
-  writeRaster(BAND_FILT, paste(rutOUT,'MOD09A1_NDWI_',name,'.tif',sep=''),overwrite=T)
-  date()
-  
-}
-
-
-
+sapply(c(1:5), FUN = function(x){ file = qaFilter(band_list[x], qa_list[x], 'mod09a1', filter)
+                                         name = band_list[x] %>% strsplit('/') %>% sapply('[',5) %>% 
+                                                        substr(1,35) %>% paste('_qafilter.tif', sep = '')
+                                         writeRaster(file, paste(rutOUT, name, sep = '')) })
