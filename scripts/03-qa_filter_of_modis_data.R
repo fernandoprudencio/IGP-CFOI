@@ -33,7 +33,7 @@ filter <- list(c('01','10'), NA, c('000', '010', '011', '100', '101', '110', '11
                  c('11'), c('11'), '1', NA, '1', NA, '1', '1')
 
 #'list of qa and reflectivity data
-band_list <- list.files(rutIN, pattern = 'refl_b01', full.names = T)
+band_list <- list.files(rutIN, pattern = 'refl_b07', full.names = T)
 qa_list   <- list.files(rutIN, pattern = 'state', full.names = T)
 
 #'Define how many cluster you want to use
@@ -44,12 +44,13 @@ cluster  <- makeCluster(UseCores)
 registerDoParallel(cluster)
 
 #'Use foreach loop and %dopar% command to run in parallel
-foreach(i = c(1:5)) %dopar% {
+foreach(i = c(1:782)) %dopar% {
   library(DescTools)  
   library(dplyr)
   library(raster)
   library(rgdal)
-  file = qaFilter(band_list[i], qa_list[i], 'mod09a1', filter)
+  i=1
+  file = qaFilter(band_list[i] %>% raster(), qa_list[i] %>% raster(), 'mod09a1', filter)
   name = band_list[i] %>% strsplit('/') %>% sapply('[',5) %>% 
                             substr(1,35) %>% paste('_qafilter.tif', sep = '')
   writeRaster(file, paste(rutOUT, name, sep = ''))
