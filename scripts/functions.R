@@ -1,4 +1,4 @@
-#'obtain a binary number with a defined digits number "bits"
+#'this function obtain a binary number with a defined digits number "bits"
 binND <- function(number, nbits){#number in binary system, nbits is digits number
   nzeros     = nbits - nchar(number)
   return(paste(substr('0000000000000000',1,nzeros), number, sep = ''))
@@ -25,11 +25,23 @@ qaFilter <- function(band, qaband, type, filter){
            substr(bin ,2, 2)  %in% filter[[10]] | # BRDF correction performed 
            substr(bin ,1, 1)  %in% filter[[11]])  # Internal Snow Mask
   }
-  #changing the values of the quality band to NA and 1
-  qa = raster(qaband)
-  qa[qa %in% dataBIN_df$dec] = NA
-  qa[!is.na(qa)] = 1
-  return(raster(band)*qa)
+#'changing the values of the quality band to NA and 1
+  qaband[qaband %in% dataBIN_df$dec] = NA
+  qaband[!is.na(qaband)] = 1
+  return(band*qaband)
+}
+
+#'this function calculate different indexes related with vegetation
+indexMODIS <- function(index, redBand, nirBand, blueBand, greenBand, swir1Band, swir2Band, swir3Band){
+  if (index == 'ndvi') { return((nirBand - redBand)/(nirBand + redBand)) }
+  if (index == 'savi') { return((nirBand - redBand)*(1+0.25)/(nirBand + redBand + 0.25)) }
+  if (index == 'ndii') { return((nirBand - swir2Band)/(nirBand + swir2Band)) }
+  if (index == 'gemi') { eta = ((2*((nirBand^2) - (redBand^2))) + (1.5*nirBand) + (0.5*redBand))/(nirBand + redBand + 0.5)
+                         return((eta*(1 - (0.25*eta))) - ((redBand - 0.125)/(1 - redBand))) }
+  if (index == 'ndwi') { return((nirBand - swir1Band)/(nirBand + swir1Band)) }
+  if (index == 'vari') { return((greenBand - redBand)/(greenBand + redBand - blueBand)) }
+  if (index == 'evi')  { return(2.5*(nirBand - redBand)/(nirBand + (6*redBand) - (7.5*blueBand) + 1)) }
+  if (index == 'gvmi') { return(((nirBand + 0.1) - (swir2Band + 0.02))/((nirBand + 0.1) + (swir2Band + 0.02))) }
 }
 
 
