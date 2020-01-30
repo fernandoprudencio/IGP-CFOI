@@ -29,7 +29,7 @@ rutOUT <- 'G:/data/mod09a1/withFILTER/'
 #' Pixel adjacent to cloud ------------------> bit 13
 #' BRDF correction performed ----------------> bit 14
 #' Internal Snow Mask -----------------------> bit 15
-filter <- list(c('01','10'), NA, c('000', '010', '011', '100', '101', '110', '111'),
+filter <- list(c('01','10'), '1', c('000', '010', '011', '100', '101', '110', '111'),
                  c('11'), c('11'), '1', NA, '1', NA, '1', '1')
 
 #'list of qa and reflectivity data
@@ -49,8 +49,7 @@ foreach(i = c(1:782)) %dopar% {
   library(dplyr)
   library(raster)
   library(rgdal)
-  i=1
-  file = qaFilter(band_list[i] %>% raster(), qa_list[i] %>% raster(), 'mod09a1', filter)
+  file = qaFilter(band_list[i] %>% raster(), qa_list[i] %>% raster(), 'mxd09a1', filter)
   name = band_list[i] %>% strsplit('/') %>% sapply('[',5) %>% 
                             substr(1,35) %>% paste('_qafilter.tif', sep = '')
   writeRaster(file, paste(rutOUT, name, sep = ''))

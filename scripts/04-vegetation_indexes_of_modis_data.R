@@ -9,9 +9,9 @@ library(doParallel)
 library(foreach)
 
 #'links, these could change with ubication of files
-rutIN  <- 'G:/data/mod09a1/withFILTER/'
+rutIN  <- 'D:/01-DataSet/2-myd09a1/withFILTER/'
 b2 <- list.files(rutIN, pattern = 'refl_b02', full.names = T)
-b6 <- list.files(rutIN, pattern = 'refl_b06', full.names = T)
+b1 <- list.files(rutIN, pattern = 'refl_b01', full.names = T)
 
 #'reading functions
 source('scripts/functions.R')
@@ -24,13 +24,13 @@ cluster  <- makeCluster(UseCores)
 registerDoParallel(cluster)
 
 #'Use foreach loop and %dopar% command to run in parallel
-foreach(i = c(1:782)) %dopar% {
+foreach(i = c(1:805)) %dopar% {
   library(dplyr)
   library(raster)
   library(rgdal)
-  file  = indexMODIS('ndii', nirBand = raster(b2[i]), swir2Band = raster(b6[i]))
+  file  = indexMODIS('ndvi', nirBand = raster(b2[i]), redBand = raster(b1[i]))
   name  = b2[i] %>% strsplit('/') %>% sapply('[',5) %>% substr(26,35)
-  name2 = paste('data/ndii_mod09a1/MOD09A1.006_sur_NDII_', name, '.tif', sep = '')
+  name2 = paste('data/ndvi_myd09a1/MYD09A1.006_sur_NDVI_', name, '.tif', sep = '')
   writeRaster(file, name2)
 }
 
