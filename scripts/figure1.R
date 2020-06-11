@@ -24,17 +24,24 @@ fires <- read_sf('data/shp/fires_register/FiresRegister_2000_Dic2019.shp')
 
 #'MAKING DATA FRAME TO PLOT A BOXPLOT ABOUT NUMBER OF FIRES BY MONTH
 #'making dataframe to plot
-df <- fires %>% dplyr::select(ANO, MES) %>% arrange(ANO, MES) %>% 
-        mutate(date = paste(ANO, MES, '01', sep = '-') %>% as.Date()) %>% filter(ANO != 2019) %>%
-           group_by(date, ANO, MES) %>% summarise(nfires = length(date) %>% as.numeric()) %>% as.data.frame() %>%
-              right_join(ts, by = 'date') %>% mutate(MES = substr(date,6,7), nfires = if_else(is.na(nfires), 0, nfires)) %>%
-                 dplyr::select(ANO, MES, nfires) %>% group_by(MES) %>%
-                    mutate(outlier = ifelse(is_outlier(nfires), ANO, NA)) %>%
-                      mutate(ANO = '2020', date = paste(ANO, MES, '01', sep = '-') %>% as.Date())
+df <- fires %>%
+  dplyr::select(ANO, MES) %>%
+  arrange(ANO, MES) %>%
+  mutate(date = paste(ANO, MES, "01", sep = "-") %>% as.Date()) %>%
+  filter(ANO != 2019) %>%
+  group_by(date, ANO, MES) %>%
+  summarise(nfires = length(date) %>% as.numeric()) %>%
+  as.data.frame() %>%
+  right_join(ts, by = "date") %>%
+  mutate(MES = substr(date, 6, 7), nfires = if_else(is.na(nfires), 0, nfires)) %>%
+  dplyr::select(ANO, MES, nfires) %>%
+  group_by(MES) %>%
+  mutate(outlier = ifelse(is_outlier(nfires), ANO, NA)) %>%
+  mutate(ANO = "2020", date = paste(ANO, MES, "01", sep = "-") %>% as.Date())
 
 label.mth <- data.frame(MES = df$MES[1:12], MES.label = substr(month.name, 1, 3))
 
-df <- df %>% left_join(label.mth)
+df <- df %>% left_join(label.mth, by = "MES")
 
 #'PLOTING VIOLIMPLOT
 X <- ggplot(df, aes(x = MES, y = nfires)) + 
@@ -43,7 +50,7 @@ X <- ggplot(df, aes(x = MES, y = nfires)) +
       geom_boxplot(alpha = 0, outlier.alpha = 1, color = 'black', width = 0.2, outlier.colour = 'black', outlier.size = 1.5) +
       stat_summary(fun.y = 'mean', geom = 'point', shape = 3, size = 2, colour = 'red',
                    width = 0.3, fill = 'red') +
-      #geom_text(aes(label = outlier), size = 4, na.rm = TRUE, hjust = -0.1, vjust = -.1, check_overlap = T) +
+      geom_text(aes(label = outlier), size = 4, na.rm = TRUE, hjust = -0.1, vjust = -.1, check_overlap = T) +
       ggtitle('Monthly fires distribution', subtitle = 'from 2000 to 2018') + 
       labs(x = '', y = '') + theme_bw() +
       theme(plot.title    = element_text(size=15),
