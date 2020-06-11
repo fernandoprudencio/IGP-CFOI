@@ -1,38 +1,86 @@
-#'@author  Fernando Prudencio
-#'this script calculate different index from mod09a1 dataset
-#'installing packages
-rm(list = ls())
-pkg <- c('DescTools', 'dplyr', 'raster', 'dfcrm', 'rgdal', 'doParallel', 'foreach')
-sapply(pkg, function(x){ if(x %in% rownames(installed.packages()) == FALSE) { install.packages(x) }})
+#' @title
+#' calculate different index vegetation
+#'
+#' @description
+#' this script calculate different index from mod09a1 dataset
+#'
+#' @author Fernando Prudencio
+#'
+#' @data
+#'
 
+rm(list = ls())
+
+#' INSTALL PACKAGES
+pkg <- c("tidyverse", "raster", "rgdal", "foreach", "doParallel")
+
+sapply(
+  pkg,
+  function(x) {
+    is.there <- x %in% rownames(installed.packages())
+    if (is.there == FALSE) {
+      install.packages(x)
+    }
+  }
+)
+
+#' LOAD PACKAGES
 library(doParallel)
 library(foreach)
 
-#'links, these could change with ubication of files
-rutIN  <- 'D:/01-DataSet/2-myd09a1/withFILTER/'
-b2 <- list.files(rutIN, pattern = 'refl_b02', full.names = T)
-b1 <- list.files(rutIN, pattern = 'refl_b01', full.names = T)
+#' LOAD FUNCTIONS
+source("scripts/functions.R")
 
-#'reading functions
-source('scripts/functions.R')
+#' CONSTANTS
+k.year <- 2001
 
-#'Define how many cluster you want to use
-UseCores <- detectCores() - 2
+#' FILE DATASET LINKS (INPUT)
+rut.in <- "data/raster/mod09a1/withFILTER/"
 
-#'make and register cluster
-cluster  <- makeCluster(UseCores)
+b2 <- list.files(rut.in,
+  pattern = sprintf("refl_b02_doy%s", k.year),
+  full.names = T
+)
+
+b6 <- list.files(rut.in,
+  pattern = sprintf("refl_b06_doy%s", k.year),
+  full.names = T
+)
+
+#' DEFINE HOW MANY CLUSTER YOU WANT TO USE
+use.cores <- detectCores() - 2
+
+#' MAKE AND REGISTER CLUSTER
+cluster <- makeCluster(use.cores)
 registerDoParallel(cluster)
 
-#'Use foreach loop and %dopar% command to run in parallel
-foreach(i = c(1:805)) %dopar% {
-  library(dplyr)
+#' USE foreach() LOOP AND %dopar% COMMAND TO RUN IN PARALLEL
+foreach(i = 1:length(b2)) %dopar% {
+  #' load packages
+  library(tidyverse)
   library(raster)
   library(rgdal)
-  file  = indexMODIS('ndvi', nirBand = raster(b2[i]), redBand = raster(b1[i]))
-  name  = b2[i] %>% strsplit('/') %>% sapply('[',5) %>% substr(26,35)
-  name2 = paste('data/ndvi_myd09a1/MYD09A1.006_sur_NDVI_', name, '.tif', sep = '')
-  writeRaster(file, name2)
+
+  index <- "gvmi"
+  file <- indexMODIS(index,
+    nirBand = raster(b2[i]) / 10000,
+    swir2Band = raster(b6[i]) / 10000
+  )
+
+  date <- b2[i] %>%
+    strsplit("/") %>%
+    sapply("[", 5) %>%
+    substr(26, 35)
+
+  name <- sprintf("data/raster/index/%s%s%s%s%s%s",
+    index,
+    "_mod09a1/MOD09A1.006_sur_",
+    toupper(index),
+    "_", date, ".tif"
+  )
+
+  writeRaster(file, name, overwrite = T)
 }
 
-#'end cluster
+#' END CLUSTER
 stopCluster(cluster)
