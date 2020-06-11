@@ -1,59 +1,108 @@
-#'@author  Fernando Prudencio
-#'this script filter mod09a1 dataset
-#'installing packages
-rm(list = ls())
-pkg <- c('DescTools', 'dplyr', 'raster', 'dfcrm', 'rgdal', 'doParallel', 'foreach')
-sapply(pkg, function(x){ if(x %in% rownames(installed.packages()) == FALSE) { install.packages(x) }})
+#' @title
+#' quality filter for mod09a1 dataset
+#'
+#' @description
+#' this script filter mod09a1 dataset
+#'
+#' @author Fernando Prudencio
+#'
+#' @data
+#'
 
+rm(list = ls())
+
+#' INSTALL PACKAGES
+pkg <- c("tidyverse", "raster", "rgdal", "foreach", "doParallel", "DescTools")
+
+sapply(
+  pkg,
+  function(x) {
+    is.there <- x %in% rownames(installed.packages())
+    if (is.there == FALSE) {
+      install.packages(x)
+    }
+  }
+)
+
+#' LOAD PACKAGES
 library(doParallel)
 library(foreach)
 
-#'reading functions
-source('scripts/functions.R')
+#' LOAD FUNCTIONS
+source("scripts/functions.R")
 
-#'links, these could change with ubication of files
-rutIN  <- 'G:/data/mod09a1/withoutFILTER/'
-rutOUT <- 'G:/data/mod09a1/withFILTER/'
+#' CONSTANTS
+k.year <- 2001
 
-#'this is the order of 16 bits of the quality band
-# (15)(14)(13)(12)(11)(10)(09)(08)(07)(06)(05)(04)(03)(02)(01)(00) - MODIS NOMENCLATURE
-# (01)(02)(03)(04)(05)(06)(07)(08)(09)(10)(11)(12)(13)(14)(15)(16) - R NOMENCLATURE
-#' Cloud State ------------------------------> bit 00-01
-#' Cloud shadow -----------------------------> bit 02
-#' Land/Water Flag --------------------------> bit 03-05
-#' Aerosol Quantity -------------------------> bit 06-07
-#' Cirrus detected --------------------------> bit 08-09
-#' Internal Cloud Algorithm Flag ------------> bit 10
-#' Internal Fire Algorithm ------------------> bit 11
-#' MOD35 snow/ice flag ----------------------> bit 12
-#' Pixel adjacent to cloud ------------------> bit 13
-#' BRDF correction performed ----------------> bit 14
-#' Internal Snow Mask -----------------------> bit 15
-filter <- list(c('01','10'), '1', c('000', '010', '011', '100', '101', '110', '111'),
-                 c('11'), c('11'), '1', NA, '1', NA, '1', '1')
+#' FILE DATASET LINKS (INPUT AND OUTPUT)
+rut.in <- "data/raster/mod09a1/withoutFILTER/"
+rut.out <- "data/raster/mod09a1/withFILTER/"
 
-#'list of qa and reflectivity data
-band_list <- list.files(rutIN, pattern = 'refl_b07', full.names = T)
-qa_list   <- list.files(rutIN, pattern = 'state', full.names = T)
+#' DESCRIPTION OF QUALITY BAND
+#'   This is the order of 16 bits of the quality band
+#'     (15)(14)(13)(12)(11)(10)(09)(08)(07)(06)(05)(04)(03)(02)(01)(00) - MODIS NOMENCLATURE
+#'     (01)(02)(03)(04)(05)(06)(07)(08)(09)(10)(11)(12)(13)(14)(15)(16) - R NOMENCLATURE
+#'
+#'   Cloud State ------------------------------> bit 00-01
+#'   Cloud shadow -----------------------------> bit 02
+#'   Land/Water Flag --------------------------> bit 03-05
+#'   Aerosol Quantity -------------------------> bit 06-07
+#'   Cirrus detected --------------------------> bit 08-09
+#'   Internal Cloud Algorithm Flag ------------> bit 10
+#'   Internal Fire Algorithm ------------------> bit 11
+#'   MOD35 snow/ice flag ----------------------> bit 12
+#'   Pixel adjacent to cloud ------------------> bit 13
+#'   BRDF correction performed ----------------> bit 14
+#'   Internal Snow Mask -----------------------> bit 15
+filter <- list(
+  c("01", "10"), "1", c("000", "010", "011", "100", "101", "110", "111"),
+  c("11"), c("11"), "1", NA, "1", NA, "1", "1"
+)
 
-#'Define how many cluster you want to use
-UseCores <- detectCores() - 2
+#' LIST OF QA DATASET
+qa.list <- list.files(rut.in,
+  pattern = sprintf("state_500m_doy%s", k.year),
+  full.names = T
+)
 
-#'make and register cluster
-cluster  <- makeCluster(UseCores)
-registerDoParallel(cluster)
+#' DEFINE HOW MANY CLUSTER YOU WANT TO USE
+use.cores <- detectCores() - 2
 
-#'Use foreach loop and %dopar% command to run in parallel
-foreach(i = c(1:782)) %dopar% {
-  library(DescTools)  
-  library(dplyr)
-  library(raster)
-  library(rgdal)
-  file = qaFilter(band_list[i] %>% raster(), qa_list[i] %>% raster(), 'mxd09a1', filter)
-  name = band_list[i] %>% strsplit('/') %>% sapply('[',5) %>% 
-                            substr(1,35) %>% paste('_qafilter.tif', sep = '')
-  writeRaster(file, paste(rutOUT, name, sep = ''))
+#' FILTER MOD091A1
+for (j in 1:7) {
+  #' list reflectivity datset
+  band.list <- list.files(rut.in,
+    pattern = sprintf("refl_b0%s_doy%s", j, k.year),
+    full.names = T
+  )
+
+  #' make and register cluster
+  cluster <- makeCluster(use.cores)
+  registerDoParallel(cluster)
+
+  #' use foreach() loop and %dopar% command to run in parallel
+  foreach(i = 1:length(qa.list)) %dopar% {
+    #' load packages
+    library(DescTools)
+    library(dplyr)
+    library(raster)
+    library(rgdal)
+
+    file <- qaFilter(
+      raster(band.list[i]),
+      raster(qa.list[i]),
+      "mxd09a1", filter
+    )
+
+    name <- band.list[i] %>%
+      strsplit("/") %>%
+      sapply("[", 5) %>%
+      substr(1, 35) %>%
+      sprintf(fmt = "%s_qafilter.tif")
+
+    writeRaster(file, sprintf("%s%s", rut.out, name), overwrite = T)
+  }
+
+  #' end cluster
+  stopCluster(cluster)
 }
-
-#'end cluster
-stopCluster(cluster)
