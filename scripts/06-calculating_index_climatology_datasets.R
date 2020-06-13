@@ -33,7 +33,7 @@ library(stringr)
 #' DEFINE CONSTANTS
 k.omit.yrs <- c(2000, 2001, 2005, 2010, 2016, 2020)
 k.dry.yrs <- c(2005, 2010, 2016)
-k.yrs <- k.dry.yrs
+k.yrs <- k.omit.yrs
 k.type <-
   if (identical(k.yrs, k.omit.yrs)) {
     k.type <- "norm"
@@ -100,8 +100,9 @@ index.list <-
   )
 
 #' CALULATE IV CLIMATOLOGY
-for (i in 1:12) {
-  month <- sprintf("%.02d", 1:12)
+for (i in 1:46) {
+  #month <- sprintf("%.02d", 1:12)
+  month <- str_sub(ts, 6, 10)[40:85]
 
   if (identical(k.yrs, k.omit.yrs)) {
     df <- tibble(
@@ -109,7 +110,7 @@ for (i in 1:12) {
       id = 1:length(date)
     ) %>%
       filter(
-        !(str_sub(date, 1, 4) %in% k.yrs) & substr(date, 6, 7) == month[i]
+        !(str_sub(date, 1, 4) %in% k.yrs) & substr(date, 6, 10) == month[i]
       )
   } else {
     df <- tibble(
@@ -117,7 +118,7 @@ for (i in 1:12) {
       id = 1:length(date)
     ) %>%
       filter(
-        (str_sub(date, 1, 4) %in% k.yrs) & substr(date, 6, 7) == month[i]
+        (str_sub(date, 1, 4) %in% k.yrs) & substr(date, 6, 10) == month[i]
       )
   }
 
@@ -127,10 +128,10 @@ for (i in 1:12) {
 
   if (i == 1) {
     stck <- index
-    names(stck)[i] <- month.abb[i]
+    names(stck)[i] <- sprintf("band%s", i)#month.abb[i]
   } else {
     stck <- stack(stck, index)
-    names(stck)[i] <- month.abb[i]
+    names(stck)[i] <- sprintf("band%s", i)#month.abb[i]
   }
 }
 
@@ -140,8 +141,12 @@ name <- index.list[1] %>%
   sapply("[", 5) %>%
   str_sub(1, 20)
 
-writeRaster(stck,
-  sprintf(
-    "data/raster/index/gvmi_mod09a1/climatology/%s_%s_clim.tif", name, k.type
-  ), overwrite = T
-)
+for (k in 1:46) {
+  writeRaster(stck[[k]],
+    sprintf(
+      "data/raster/index/gvmi_mod09a1/climatology/%s/%s_%s_8day_clim_%s.nc",
+      k.type, name, k.type, month[k]
+    ),
+    overwrite = T
+  )
+}
