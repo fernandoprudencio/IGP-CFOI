@@ -51,7 +51,7 @@ library(cptcity)
 Sys.setlocale(category = "LC_ALL", locale = "english")
 
 #' DEFINE CONSTANTS
-k.regions <- c(6)
+k.regions <- c(8)
 k.type <- "dry"
 
 #' CREATE DATE VECTOR
@@ -141,14 +141,19 @@ df.val <- stack.data %>%
 
 #'   edit dataframe
 df <- df.val %>%
-  mutate(category = cut(elev, breaks = c(seq(1000, 4800, 200), 5200))) %>%
+  mutate(category = cut(elev, breaks = c(seq(0, 4800, 200), 6000))) %>%
   group_by(category) %>%
   summarise_each(funs(mean)) %>%
-  dplyr::filter(elev >= 1500) %>%
+  dplyr::filter(elev >= 1400) %>%
   mutate(
-    minelev = seq(1400, 4800, 200),
-    maxelev = seq(1600, 5000, 200),
-    inter = sprintf("( %s %s %s ]", minelev, " - ", maxelev)
+    inter = c(
+      sprintf(
+        "( %s - %s ]",
+        seq(1400, 4600, 200),
+        seq(1600, 4800, 200)
+      ),
+      "( 4800 - 5600 ]"
+    )
   ) %>%
   dplyr::select(inter, sprintf("band%0.2d", 1:46)) %>%
   gather(key = "variable", value = "value", -inter) %>%
@@ -184,7 +189,7 @@ png(
 #' PLOT HEATMAP
 levelplot(iv ~ mes * inter,
   data = df,
-  at = seq(-.04, .24, .02),
+  at = seq(-.04, .34, .02),
   margin = c(1, 1),
   xlab = NULL,
   ylab = NULL,
@@ -193,9 +198,9 @@ levelplot(iv ~ mes * inter,
     rev = T
   ),
   colorkey = list(
-    at = seq(-.04, .24, .02),
+    at = seq(-.04, .34, .02),
     space = "top", # location of legend
-    labels = list(at = seq(-.04, .24, .04)), font = 1
+    labels = list(at = seq(-.04, .34, .04)), font = 1
     # height = .95, width = 1.4,
   ),
   # aspect = "iso",
@@ -218,8 +223,14 @@ levelplot(iv ~ mes * inter,
 grid::grid.text(
   "GVMI",
   y = unit(.915, "npc"),
-  rot = 0, x = unit(.095, "npc"),
-  gp = gpar(fontsize = 22, fontface = "bold", col = "darkred")
+  rot = 0, x = unit(.085, "npc"),
+  gp = gpar(
+    fontsize = 22,
+    fontface = "bold",
+    col = rgb(104, 22, 89, maxColorValue = 255)
+    #col = rgb(21, 29, 68, maxColorValue = 255)
+    #col = rgb(52, 13, 53, maxColorValue = 255)
+  )
 )
 
 grid::grid.text(
