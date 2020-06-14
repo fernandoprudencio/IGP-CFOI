@@ -200,7 +200,7 @@ levelplot(iv ~ mes * inter,
   colorkey = list(
     at = seq(-.04, .34, .02),
     space = "top", # location of legend
-    labels = list(at = seq(-.04, .34, .04)), font = 1
+    labels = list(at = seq(-.04, .34, .04), cex = 1.1)
     # height = .95, width = 1.4,
   ),
   # aspect = "iso",
@@ -222,7 +222,7 @@ levelplot(iv ~ mes * inter,
 
 grid::grid.text(
   "GVMI",
-  y = unit(.915, "npc"),
+  y = unit(.908, "npc"),
   rot = 0, x = unit(.085, "npc"),
   gp = gpar(
     fontsize = 22,
