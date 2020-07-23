@@ -48,11 +48,12 @@ Sys.setlocale(category = 'LC_ALL', locale = 'english')
 source("scripts/functions.R")
 
 #' LOAD .RData FILES
-load("data/rdata/gvmi_avr_vls_reg6.RData")
+load("data/rdata/gvmi_avr_vls_Andes_2020193.RData")
 
 #' CONSTANTS
 k.elev <- c(1500, 4000)
-k.regions <- c(6)
+k.regions <- c(6, 8)
+k.index <- "gvmi"
 
 #' CREATE DATE VECTOR
 date <- Sys.Date()
@@ -120,7 +121,7 @@ sf.region <- st_read(
 
 #' LOAD RASTER DATA
 lst.iv <- list.files(
-  "data/raster/index/gvmi_mod09a1/",
+  sprintf("data/raster/index/%s_mod09a1/", k.index),
   pattern = ".tif", full.names = T
 )
 
@@ -158,7 +159,10 @@ for (i in 1:length(lst.iv)) {
   }
 }
 
-save(index.avr.vle, file = sprintf("data/rdata/gvmi_avr_vls_reg%s.RData", k.regions))
+save(
+  index.avr.vle,
+  file = sprintf("data/rdata/%s_avr_vls_Andes_2020193.RData", k.index)
+)
 
 #' BUILD A DATAFRAME TO PLOT A SEASONAL BEHAVIOR OF "IV"
 month.lbl <- tibble(month = sprintf("%.02d", 1:12), lbl = month.abb)
@@ -550,7 +554,7 @@ df <- tibble(
     )
   ) %>%
   ungroup() %>%
-  dplyr::select(oct.day, dry.mean, norm.mean, yr.2020, max.val, min.val) %>%
+  dplyr::select(oct.day, dry.mean, norm.mean, yr.2005, yr.2010, yr.2016, yr.2020, max.val, min.val) %>%
   mutate(
     month = str_sub(oct.day, 1, 2),
     day = str_sub(oct.day, 4, 5)
@@ -562,110 +566,92 @@ df <- tibble(
     name.norm = "meanH"
   )
 
-plt.iv <- ggplot(df, aes(date, norm.mean)) +
-  geom_line(
-    aes(color = name.norm),
-    size = .6,
-    linetype = "dotdash",
-    show.legend = T,
-    color = rgb(0, 128, 0, maxColorValue = 255)
+df.end <- df %>%
+  dplyr::select(
+    norm.mean, yr.2005, yr.2010, yr.2016, yr.2020, max.val, min.val, date
+  ) %>%
+  gather(key = "type", value = "value", -date, -max.val, -min.val)
+
+lbls <- c("promedio años\ncondiciones normales", "año 2005", "año 2010", "año 2016", "año 2020")
+
+plt.iv <- ggplot(df.end, aes(x = date, y = value, group = type)) +
+  labs(
+    title = "Evolución temporal del\níndice de humedad de vegetación (GVMI)\npara la región Andina (1500 - 4000m)"
   ) +
   geom_ribbon(
     aes(ymin = min.val, ymax = max.val),
-    color = rgb(0, 128, 0, maxColorValue = 255), size = 0.2,
-    alpha = .1, fill = rgb(0, 128, 0, maxColorValue = 255)
+    size = .2, fill = "gray", color = "gray", alpha = .1
   ) +
-  geom_line(
-    aes(date, dry.mean), size = .6,
-    color = rgb(237, 28, 36, maxColorValue = 255)
-  ) +
-  geom_line(
-    aes(date, yr.2020), size = .6,
-    color = rgb(0, 128, 0, maxColorValue = 255)
-  ) +
-  geom_point(
-    aes(date, dry.mean), size = 1.5,
-    color = rgb(237, 28, 36, maxColorValue = 255)
-  ) +
-  geom_point(
-    aes(date, yr.2020), size = 1.5,
-    color = rgb(0, 128, 0, maxColorValue = 255)
-  ) +
-#  labs(
-#    title = "GVMI monthly evolution", subtitle = "from 2000 to 2020\n"
-#  ) +
+  geom_line(aes(linetype = type, color = type, size = type)) +
+  geom_point(aes(shape = type, color = type), size = 1) +
+  scale_linetype_manual(values = c("dashed", "solid", "solid", "solid", "solid"), labels = lbls) +
+  scale_color_manual(values = c("gray", "blue", "black", "green", "red"), labels = lbls) +
+  scale_size_manual(values = c(1, .5, .5, .5, .5), labels = lbls) +
+  scale_shape_manual(values = c(NA, NA, NA, NA, 19), labels = lbls) +
   scale_x_date(
-    date_breaks = "1 month",
-    date_labels = "%b",
-    expand = c(.02, .01)
+    limits = c(as.Date("2020-01-01"), as.Date("2020-12-31")),
+    breaks = seq(as.Date("2020-01-01"), as.Date("2020-12-31"), by = "1 month"),
+    date_labels = "%b", expand = expand_scale(mult = c(.02, 0))
   ) +
   scale_y_continuous(
     breaks = seq(0, .3, .04),
-    limits = c(-.003, .3),
-    expand = c(0, 0)
+    limits = c(-.003, .3)
   ) +
   annotation_ticks(
     sides = "l",
     ticklength = 1 * unit(0.1, "cm"),
-    color = rgb(0, 128, 0, maxColorValue = 255)
-  ) +
-  annotation_ticks(
-    sides = "b",
-    ticklength = 1 * unit(0.1, "cm")
-  ) +
-  annotation_ticks(
-    sides = "t",
-    ticklength = 1 * unit(0.1, "cm")
+    color = "black"
   ) +
   coord_cartesian(clip = "off") +
   theme_bw() +
   theme(
-    plot.title = element_text(size = 15),
-    plot.subtitle = element_text(size = 15),
+    legend.background = element_rect(fill = "white", color = "black"),
+    legend.margin = margin(3, 7, 7, 7),
+    #legend.key.size = unit(.8, "cm"),
+    legend.key.width = unit(.9, "cm"),
+    legend.key.height = unit(.4, "cm"),
+    legend.position = c(0.82, 0.79),
+    legend.title = element_blank(),
+    legend.text = element_text(size = 12, family = "Source Sans Pro"),
+    plot.title = element_text(size = 15, hjust = .5, family = "Source Sans Pro"),
     axis.text.x = element_text(
-      size = 12, colour = "black", hjust = -.2, face = "bold"
+      size = 12, colour = "black", family = "Source Sans Pro",
+      face = "bold", angle = 0, vjust = .6
     ),
     axis.text.y = element_text(
-      size = 13, face = "bold",
-      color = rgb(0, 128, 0, maxColorValue = 255)
+      size = 13, face = "bold", family = "Source Sans Pro", color = "black"
     ),
     axis.title.x = element_blank(),
     axis.title.y = element_blank(),
     axis.ticks.x = element_line(color = "black"),
-    axis.ticks.y = element_line(color = rgb(0, 128, 0, maxColorValue = 255)),
-    #axis.title.y = element_text(size = 20, angle = 0, hjust = 30, vjust = 0.5),
-    #panel.background = element_rect(fill = "linen"),
+    axis.ticks.y = element_line(color = "black"),
     panel.grid.minor = element_blank(),
-    panel.grid.major = element_blank(),
-#    panel.grid.major = element_line(
-#      size = 0.3, color = "gray", linetype = "dashed"
-#    ),
+    panel.grid.major = element_line(
+      size = 0.3, color = "gray", linetype = "dashed"
+    ),
     panel.border = element_rect(size = .5, color = "black"),
     plot.margin = margin(1.5, .1, 1, 1, "cm"),
     axis.line.y = element_line(
-      size = .8, color = rgb(0, 128, 0, maxColorValue = 255)
+      size = .8, color = "black"
     )
   )
-
-plt.iv
 
 title.axis <- textGrob(
   label = "GVMI", check.overlap = F,
   x = unit(0, "lines"),
-  y = unit(-1.4, "lines"),
+  y = unit(-3.8, "lines"),
   hjust = -.3,
   gp = gpar(
     fontsize = 18,
     fontface = "bold",
-    col = rgb(0, 128, 0, maxColorValue = 255)
+    col = "black"
   )
 )
 
-p <- gridExtra::arrangeGrob(plt.iv, top = title.axis)
-grid.draw(p)
+plt <- gridExtra::arrangeGrob(plt.iv, top = title.axis)
 
 ggsave(
-  plot = p,
-  sprintf("exports/octday_gvmi_ssnl_behav_2000-2020_reg%s.png", k.regions),
-  width = 15, height = 15, units = "cm", dpi = 1000
+  plot = plt,
+  "exports/octday_gvmi_ssnl_behav_2000-2020_Andes_2020193.png",
+  width = 20, height = 15, units = "cm", dpi = 1000
 )
