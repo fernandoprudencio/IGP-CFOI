@@ -538,17 +538,17 @@ df <- tibble(
     ),
     max.val = max(
       c(
-        yr.2000, yr.2001, yr.2002, yr.2003, yr.2004, yr.2005, yr.2006, yr.2007, yr.2008,
-        yr.2009, yr.2010, yr.2011, yr.2012, yr.2013, yr.2014, yr.2015, yr.2016, yr.2017,
-        yr.2018, yr.2019
+        yr.2000, yr.2001, yr.2002, yr.2003, yr.2004, yr.2005, yr.2006, yr.2007,
+        yr.2008, yr.2009, yr.2010, yr.2011, yr.2012, yr.2013, yr.2014, yr.2015,
+        yr.2016, yr.2017, yr.2018, yr.2019
       ),
       na.rm = T
     ),
     min.val = min(
       c(
-        yr.2000, yr.2001, yr.2002, yr.2003, yr.2004, yr.2005, yr.2006, yr.2007, yr.2008,
-        yr.2009, yr.2010, yr.2011, yr.2012, yr.2013, yr.2014, yr.2015, yr.2016, yr.2017,
-        yr.2018, yr.2019
+        yr.2000, yr.2001, yr.2002, yr.2003, yr.2004, yr.2005, yr.2006, yr.2007,
+        yr.2008, yr.2009, yr.2010, yr.2011, yr.2012, yr.2013, yr.2014, yr.2015,
+        yr.2016, yr.2017, yr.2018, yr.2019
       ),
       na.rm = T
     )
@@ -568,11 +568,14 @@ df <- tibble(
 
 df.end <- df %>%
   dplyr::select(
-    norm.mean, yr.2005, yr.2010, yr.2016, yr.2020, max.val, min.val, date
+    yr.2020, dry.mean, norm.mean, max.val, min.val, date
   ) %>%
   gather(key = "type", value = "value", -date, -max.val, -min.val)
 
-lbls <- c("promedio años\ncondiciones normales", "año 2005", "año 2010", "año 2016", "año 2020")
+lbls <- c(
+  "promedio años\ncondiciones secas\n(2005, 2010, 2016)",
+  "promedio años\ncondiciones normales", "año 2020"
+)
 
 plt.iv <- ggplot(df.end, aes(x = date, y = value, group = type)) +
   labs(
@@ -583,11 +586,19 @@ plt.iv <- ggplot(df.end, aes(x = date, y = value, group = type)) +
     size = .2, fill = "gray", color = "gray", alpha = .1
   ) +
   geom_line(aes(linetype = type, color = type, size = type)) +
-  geom_point(aes(shape = type, color = type), size = 1) +
-  scale_linetype_manual(values = c("dashed", "solid", "solid", "solid", "solid"), labels = lbls) +
-  scale_color_manual(values = c("gray", "blue", "black", "green", "red"), labels = lbls) +
-  scale_size_manual(values = c(1, .5, .5, .5, .5), labels = lbls) +
-  scale_shape_manual(values = c(NA, NA, NA, NA, 19), labels = lbls) +
+  geom_point(aes(shape = type, color = type), size = 2) +
+  scale_linetype_manual(
+    values = c("dashed", "dashed", "solid"), labels = lbls
+  ) +
+  scale_color_manual(
+    values = c(
+      rgb(237, 28, 36, maxColorValue = 255),
+      "gray", rgb(237, 28, 36, maxColorValue = 255)
+    ),
+    labels = lbls
+  ) +
+  scale_size_manual(values = c(1, 1, 1), labels = lbls) +
+  scale_shape_manual(values = c(NA, NA, 19), labels = lbls) +
   scale_x_date(
     limits = c(as.Date("2020-01-01"), as.Date("2020-12-31")),
     breaks = seq(as.Date("2020-01-01"), as.Date("2020-12-31"), by = "1 month"),
@@ -607,7 +618,7 @@ plt.iv <- ggplot(df.end, aes(x = date, y = value, group = type)) +
   theme(
     legend.background = element_rect(fill = "white", color = "black"),
     legend.margin = margin(3, 7, 7, 7),
-    #legend.key.size = unit(.8, "cm"),
+    # legend.key.size = unit(.8, "cm"),
     legend.key.width = unit(.9, "cm"),
     legend.key.height = unit(.4, "cm"),
     legend.position = c(0.82, 0.79),
