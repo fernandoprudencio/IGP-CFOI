@@ -32,7 +32,12 @@ library(foreach)
 source("scripts/functions.R")
 
 #' CONSTANTS
-k.year <- 2001
+k.year <- 2020
+
+#' LOAD REFERENCE RASTER
+ref <- raster(
+  "data/raster/index/gvmi_mod09a1/MOD09A1.006_sur_GVMI_doy2002033.tif"
+)
 
 #' FILE DATASET LINKS (INPUT)
 rut.in <- "data/raster/mod09a1/withFILTER/"
@@ -65,7 +70,7 @@ foreach(i = 1:length(b2)) %dopar% {
   file <- indexMODIS(index,
     nirBand = raster(b2[i]) / 10000,
     swir2Band = raster(b6[i]) / 10000
-  )
+  ) %>% resample(ref)
 
   date <- b2[i] %>%
     strsplit("/") %>%
