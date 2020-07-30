@@ -27,6 +27,7 @@ sapply(
 #' LOAD PACKAGES
 library(doParallel)
 library(foreach)
+library(tidyverse)
 
 #' LOAD FUNCTIONS
 source("scripts/functions.R")
@@ -55,7 +56,7 @@ rut.out <- "data/raster/mod09a1/withFILTER/"
 #'   BRDF correction performed ----------------> bit 14
 #'   Internal Snow Mask -----------------------> bit 15
 filter <- list(
-  c("01", "10"), "1", c("000", "010", "011", "100", "101", "110", "111"),
+  NA, "1", c("000", "010", "011", "100", "101", "110", "111"),
   c("11"), c("11"), "1", NA, "1", NA, "1", "1"
 )
 
