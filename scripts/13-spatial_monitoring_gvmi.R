@@ -44,8 +44,7 @@ link <- as.character(readline(prompt = "\nEnter folder location: \n")) %>%
 
 for (i in 1:length(link)) {
   n <- link[i] %>%
-    str_split("/") %>%
-    sapply("[", 4)
+    basename()
   cat(sprintf("\n%s. %s", i, n))
 }
 
