@@ -42,18 +42,18 @@ library(scales)
 library(gridExtra)
 
 #' CHANGE TO ENGLISH LANGUAGE
-Sys.setlocale(category = 'LC_ALL', locale = 'english')
+Sys.setlocale(category = "LC_ALL", locale = "english")
 
 #' LOAD FUNCTIONS
 source("scripts/functions.R")
-
-#' LOAD .RData FILES
-load("data/rdata/gvmi_avr_vls_Andes_2020193.RData")
 
 #' CONSTANTS
 k.elev <- c(1500, 4000)
 k.regions <- c(6, 8)
 k.index <- "gvmi"
+
+#' LOAD .RData FILES
+load(sprintf("data/rdata/%s_avr_vls_Andes.RData", k.index))
 
 #' CREATE DATE VECTOR
 date <- Sys.Date()
@@ -119,33 +119,37 @@ sf.region <- st_read(
   summarise(nfeature = length(gridcode)) %>%
   dplyr::filter(gridcode %in% k.regions)
 
-#' LOAD RASTER DATA
+#' LOAD LIST OF VEGETATION INDEX
 lst.iv <- list.files(
   sprintf("data/raster/index/%s_mod09a1/", k.index),
   pattern = ".tif", full.names = T
 )
 
-grd.dem <- raster("data/raster/dem/dem.tif") %>%
-  resample(raster(lst.iv[1])) %>%
-  crop(sf.region) %>%
-  mask(sf.region)
+# LOAD DEM TO MASK BY ELEVATION INTERVAL
+if (
+  list.files("data/raster/dem/", pattern = "^.*\\mask.tif$") ==
+    "SRTM_500m_resampled_mask.tif"
+) {
+  grd.dem <- raster("data/raster/dem/SRTM_500m_resampled_mask.tif")
+} else {
+  grd.dem <- raster("data/raster/dem/dem.tif") %>%
+    resample(raster(lst.iv[1])) %>%
+    crop(sf.region) %>%
+    mask(sf.region)
 
-#' SELECT ELEVATION RANGE TO BE CONSIDERED IN THE ANALYSIS
-grd.dem[grd.dem < k.elev[1] | grd.dem > k.elev[2]] <- NA
-grd.dem[!is.na(grd.dem)] <- 1
+  #' SELECT ELEVATION RANGE TO BE CONSIDERED IN THE ANALYSIS
+  grd.dem[grd.dem < k.elev[1] | grd.dem > k.elev[2]] <- NA
+  grd.dem[!is.na(grd.dem)] <- 1
+
+  writeRaster(
+    grd.dem, "data/raster/dem/SRTM_500m_resampled_mask.tif",
+    overwrite = T
+  )
+}
 
 #' EXTRACT VALUES FROM "IV" DATA
-for (i in 1:length(lst.iv)) {
-  print(i)
-  if (i == 1) {
-    index.avr.vle <- (
-      (raster(lst.iv[i]) %>%
-        crop(sf.region) %>%
-        mask(sf.region)) * grd.dem
-    ) %>%
-      getValues() %>%
-      mean(na.rm = T)
-  } else {
+if (length(lst.iv) > length(index.avr.vle)) {
+  for (i in (length(index.avr.vle) + 1):length(lst.iv)) {
     index.avr.vle <- c(
       index.avr.vle,
       (
@@ -157,12 +161,46 @@ for (i in 1:length(lst.iv)) {
         mean(na.rm = T)
     )
   }
+
+  save(
+    index.avr.vle,
+    file = sprintf("data/rdata/%s_avr_vls_Andes.RData", k.index)
+  )
 }
 
-save(
-  index.avr.vle,
-  file = sprintf("data/rdata/%s_avr_vls_Andes_2020193.RData", k.index)
-)
+if (
+  list.files("data/rdata/", pattern = "^.*\\Andes.RData$") !=
+    sprintf("%s_avr_vls_Andes.RData", k.index)
+) {
+  for (i in 1:length(lst.iv)) {
+    print(i)
+    if (i == 1) {
+      index.avr.vle <- (
+        (raster(lst.iv[i]) %>%
+          crop(sf.region) %>%
+          mask(sf.region)) * grd.dem
+      ) %>%
+        getValues() %>%
+        mean(na.rm = T)
+    } else {
+      index.avr.vle <- c(
+        index.avr.vle,
+        (
+          (raster(lst.iv[i]) %>%
+            crop(sf.region) %>%
+            mask(sf.region)) * grd.dem
+        ) %>%
+          getValues() %>%
+          mean(na.rm = T)
+      )
+    }
+  }
+
+  save(
+    index.avr.vle,
+    file = sprintf("data/rdata/%s_avr_vls_Andes.RData", k.index)
+  )
+}
 
 #' BUILD A DATAFRAME TO PLOT A SEASONAL BEHAVIOR OF "IV"
 month.lbl <- tibble(month = sprintf("%.02d", 1:12), lbl = month.abb)
@@ -291,7 +329,7 @@ boxplt.iv <- ggplot(df, mapping = aes(month, value)) +
     ),
     axis.title.x = element_blank(),
     axis.title.y = element_text(size = 20),
-    #panel.background = element_rect(fill = "linen"),
+    # panel.background = element_rect(fill = "linen"),
     panel.grid.minor = element_blank(),
     panel.grid.major = element_line(
       size = 0.3, color = "gray", linetype = "dashed"
@@ -421,7 +459,7 @@ boxplt.iv <- ggplot(df, mapping = aes(oct.day, value)) +
     ),
     axis.title.x = element_blank(),
     axis.title.y = element_text(size = 20),
-    #panel.background = element_rect(fill = "linen"),
+    # panel.background = element_rect(fill = "linen"),
     panel.grid.minor = element_blank(),
     panel.grid = element_line(
       size = 0.3, color = "gray", linetype = "dashed"
@@ -579,7 +617,7 @@ lbls <- c(
 
 plt.iv <- ggplot(df.end, aes(x = date, y = value, group = type)) +
   labs(
-    title = "Evolución temporal del\níndice de humedad de vegetación (GVMI)\npara la región Andina (1500 - 4000m)"
+    title = "Evolución estacional del índice de humedad\nde vegetación (GVMI) para la región Andina (1500 - 4000m)"
   ) +
   geom_ribbon(
     aes(ymin = min.val, ymax = max.val),
@@ -650,7 +688,7 @@ plt.iv <- ggplot(df.end, aes(x = date, y = value, group = type)) +
 title.axis <- textGrob(
   label = "GVMI", check.overlap = F,
   x = unit(0, "lines"),
-  y = unit(-3.8, "lines"),
+  y = unit(-3, "lines"),
   hjust = -.3,
   gp = gpar(
     fontsize = 18,
@@ -663,6 +701,6 @@ plt <- gridExtra::arrangeGrob(plt.iv, top = title.axis)
 
 ggsave(
   plot = plt,
-  "exports/octday_gvmi_ssnl_behav_2000-2020_Andes_2020193.png",
+  "exports/octday_gvmi_ssnl_behav_2000-2020_Andes_2020209.png",
   width = 20, height = 15, units = "cm", dpi = 1000
 )
