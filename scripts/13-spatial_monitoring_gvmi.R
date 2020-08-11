@@ -20,7 +20,7 @@ sapply(
   function(x) {
     is.there <- x %in% rownames(installed.packages())
     if (is.there == FALSE) {
-      install.packages(x)
+      install.packages(x, dependencies = T)
     }
   }
 )
@@ -95,7 +95,7 @@ sf.peru <- st_read(
   dsn = "data/vector/limits.gpkg",
   layer = "peru_departaments", quiet = T, as_tibble = T
 ) %>%
-  st_centroid(of_largest_polygon = FALSE) %>%
+  st_centroid(of_largest_polygon = T) %>%
   filter(Departamen %in% k.dep) %>%
   mutate(Departamen = as.character(Departamen))
 #'     load sp data
@@ -107,7 +107,7 @@ index <- raster(k.data) %>%
   mask(sf.world %>% filter(COUNTRY == "Peru"))
 
 #' SAVE PLOT
-if (grepl(k.data, pattern = "anom")) {
+if (grepl(k.data, pattern = "anom_gvmi")) {
   png(
     sprintf("exports/gvmi_anom_%s_%s.png", k.mth, k.yr),
     width = 20, height = 28, units = "cm", res = 1000
@@ -155,55 +155,61 @@ if (grepl(k.data, pattern = "anom")) {
         fontfamily = "Source Sans Pro"
       )
     )
-} else {
+
+  #' CLOSE THE SAVED OF PLOT
+  dev.off()
+}
+
+if (!grepl(k.data, pattern = "anom_gvmi")) {
   png(
     sprintf("exports/gvmi_%s_%s.png", k.mth, k.yr),
     width = 20, height = 28, units = "cm", res = 1000
   )
-  
-levelplot(img %>% mask(sf.world %>% filter(COUNTRY == "Peru")),
-  main = list(
-    sprintf("Condiciones de GVMI - %s %s", k.mth, k.yr),
-    cex = 2,
-    side = 1, line = .5, fontfamily = "Source Sans Pro"
-  ),
-  scales = list(
-    x = list(limits = c(-81.8, -68.2)),
-    y = list(limits = c(-18.7, .4))
-  ),
-  col.regions = rev(cb.palette),
-  margin = F,
-  pretty = T,
-  maxpixels = 15e6,
-  at = c(-.1, seq(0, .5, .025)),
-  colorkey = list(
-    at = c(-.1, seq(0, .5, .025)),
-    space = "right", # location of legend
-    labels = list(at = c(-.1, seq(0, .5, .1)), cex = 1.1),
-    font = list(family = "Source Sans Pro")
-  ),
-  xlab = NULL,
-  ylab = NULL,
-  par.settings = list(
-    axis.text = list(fontfamily = "Source Sans Pro", cex = 1.2),
-    axis.text = list(fontfamily = "Source Sans Pro", cex = 1.2),
-    par.xlab.text = list(fontfamily = "Source Sans Pro"),
-    par.ylab.text = list(fontfamily = "Source Sans Pro"),
-    par.main.text = list(fontfamily = "Source Sans Pro"),
-    par.sub.text = list(fontfamily = "Source Sans Pro")
-  )
-) +
-  latticeExtra::layer(
-    sp.lines(sp.world, col = "black", lwd = 2),
-    # sp.lines(sp.dep, col = "black", lwd = .8),
-    sp.points(sp.peru, pch = 20, cex = 1, col = "black"),
-    sp.text(
-      coordinates(sp.peru),
-      txt = sf.peru$Departamen, pos = 1, cex = 1.2,
-      fontfamily = "Source Sans Pro"
-    )
-  )
-}
 
-#' CLOSE THE SAVED OF PLOT
-dev.off()
+  levelplot(
+    index,
+    main = list(
+      sprintf("Condiciones de GVMI - %s %s", k.mth, k.yr),
+      cex = 2,
+      side = 1, line = .5, fontfamily = "Source Sans Pro"
+    ),
+    scales = list(
+      x = list(limits = c(-81.8, -68.2)),
+      y = list(limits = c(-18.7, .4))
+    ),
+    col.regions = rev(cb.palette),
+    margin = F,
+    pretty = T,
+    maxpixels = 15e6,
+    at = c(-.1, seq(0, .5, .025)),
+    colorkey = list(
+      at = c(-.1, seq(0, .5, .025)),
+      space = "right", # location of legend
+      labels = list(at = c(-.1, seq(0, .5, .1)), cex = 1.1),
+      font = list(family = "Source Sans Pro")
+    ),
+    xlab = NULL,
+    ylab = NULL,
+    par.settings = list(
+      axis.text = list(fontfamily = "Source Sans Pro", cex = 1.2),
+      axis.text = list(fontfamily = "Source Sans Pro", cex = 1.2),
+      par.xlab.text = list(fontfamily = "Source Sans Pro"),
+      par.ylab.text = list(fontfamily = "Source Sans Pro"),
+      par.main.text = list(fontfamily = "Source Sans Pro"),
+      par.sub.text = list(fontfamily = "Source Sans Pro")
+    )
+  ) +
+    latticeExtra::layer(
+      sp.lines(sp.world, col = "black", lwd = 2),
+      # sp.lines(sp.dep, col = "black", lwd = .8),
+      sp.points(sp.peru, pch = 20, cex = 1, col = "black"),
+      sp.text(
+        coordinates(sp.peru),
+        txt = sf.peru$Departamen, pos = 1, cex = 1.2,
+        fontfamily = "Source Sans Pro"
+      )
+    )
+
+  #' CLOSE THE SAVED OF PLOT
+  dev.off()
+}
