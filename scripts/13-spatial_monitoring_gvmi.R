@@ -6,7 +6,6 @@
 #'   anomalies for each month of the current year
 #'
 #' @author Fernando Prudencio
-
 rm(list = ls())
 
 #' INSTALL PACKAGES
@@ -20,7 +19,7 @@ sapply(
   function(x) {
     is.there <- x %in% rownames(installed.packages())
     if (is.there == FALSE) {
-      install.packages(x)
+      install.packages(x, dependencies = T)
     }
   }
 )
@@ -37,19 +36,10 @@ library(latticeExtra)
 library(rasterVis)
 library(maptools)
 library(grid)
+library(magick)
 
 #' CONSTANTS
-link <- as.character(readline(prompt = "\nEnter folder location: \n")) %>%
-  list.files(pattern = "*.tif", full.names = T)
-
-for (i in 1:length(link)) {
-  n <- link[i] %>%
-    basename()
-  cat(sprintf("\n%s. %s", i, n))
-}
-
-num.lyr <- as.integer(readline(prompt = "\nEnter layer[1/2/3/...]: \n"))
-k.data <- link[num.lyr]
+k.data <- file.choose()
 
 k.dep <- c(
   "Piura", "Cajamarca", "La Libertad", "Ancash", "Loreto", "Huancavelica",
@@ -95,7 +85,7 @@ sf.peru <- st_read(
   dsn = "data/vector/limits.gpkg",
   layer = "peru_departaments", quiet = T, as_tibble = T
 ) %>%
-  st_centroid(of_largest_polygon = FALSE) %>%
+  st_centroid(of_largest_polygon = T) %>%
   filter(Departamen %in% k.dep) %>%
   mutate(Departamen = as.character(Departamen))
 #'     load sp data
@@ -106,66 +96,25 @@ sp.peru <- as(st_geometry(sf.peru), Class = "Spatial")
 index <- raster(k.data) %>%
   mask(sf.world %>% filter(COUNTRY == "Peru"))
 
-#' SAVE PLOT
-if (grepl(k.data, pattern = "anom")) {
-  png(
-    sprintf("exports/gvmi_anom_%s_%s.png", k.mth, k.yr),
-    width = 20, height = 28, units = "cm", res = 1000
-  )
-
-  levelplot(index,
-    main = list(
-      sprintf("Anomalías de GVMI - %s %s", k.mth, k.yr),
-      cex = 2,
-      side = 1, line = .5, fontfamily = "Source Sans Pro"
-    ),
-    scales = list(
-      x = list(limits = c(-81.8, -68.2)),
-      y = list(limits = c(-18.7, .4))
-    ),
-    col.regions = rev(cb.palette),
-    margin = F,
-    pretty = T,
-    maxpixels = 15e6,
-    at = seq(-.4, .4, .025),
-    colorkey = list(
-      at = seq(-.4, .4, .025),
-      space = "right", # location of legend
-      labels = list(at = seq(-.4, .4, .1), cex = 1.1),
-      font = list(family = "Source Sans Pro")
-    ),
-    xlab = NULL,
-    ylab = NULL,
-    par.settings = list(
-      axis.text = list(fontfamily = "Source Sans Pro", cex = 1.2),
-      axis.text = list(fontfamily = "Source Sans Pro", cex = 1.2),
-      par.xlab.text = list(fontfamily = "Source Sans Pro"),
-      par.ylab.text = list(fontfamily = "Source Sans Pro"),
-      par.main.text = list(fontfamily = "Source Sans Pro"),
-      par.sub.text = list(fontfamily = "Source Sans Pro")
-    )
-  ) +
-    latticeExtra::layer(
-      sp.lines(sp.world, col = "black", lwd = 2),
-      # sp.lines(sp.dep, col = "black", lwd = .8)
-      sp.points(sp.peru, pch = 20, cex = 1, col = "black"),
-      sp.text(
-        coordinates(sp.peru),
-        txt = sf.peru$Departamen, pos = 1, cex = 1.2,
-        fontfamily = "Source Sans Pro"
-      )
-    )
+#' PLOT
+if (grepl(k.data, pattern = "anom_gvmi")) {
+  name <- "exports/anom_gvmi.png"
+  title <- sprintf("Anomalías de GVMI - %1$s %2$s", k.mth, k.yr)
+  intrv <- seq(-.4, .4, .025)
+  intrv.lbl <- seq(-.4, .4, .1)
 } else {
-  png(
-    sprintf("exports/gvmi_%s_%s.png", k.mth, k.yr),
-    width = 20, height = 28, units = "cm", res = 1000
-  )
-  
-levelplot(img %>% mask(sf.world %>% filter(COUNTRY == "Peru")),
+  name <- "exports/gvmi.png"
+  title <- sprintf("Condiciones de GVMI - %1$s %2$s", k.mth, k.yr)
+  intrv <- c(-.1, seq(0, .5, .025))
+  intrv.lbl <- c(-.1, seq(0, .5, .1))
+}
+
+png(name, width = 20, height = 28, units = "cm", res = 500)
+
+levelplot(index,
   main = list(
-    sprintf("Condiciones de GVMI - %s %s", k.mth, k.yr),
-    cex = 2,
-    side = 1, line = .5, fontfamily = "Source Sans Pro"
+    title,
+    cex = 2, side = 1, line = .5, fontfamily = "Source Sans Pro"
   ),
   scales = list(
     x = list(limits = c(-81.8, -68.2)),
@@ -175,15 +124,16 @@ levelplot(img %>% mask(sf.world %>% filter(COUNTRY == "Peru")),
   margin = F,
   pretty = T,
   maxpixels = 15e6,
-  at = c(-.1, seq(0, .5, .025)),
+  at = intrv,
   colorkey = list(
-    at = c(-.1, seq(0, .5, .025)),
+    at = intrv,
     space = "right", # location of legend
-    labels = list(at = c(-.1, seq(0, .5, .1)), cex = 1.1),
+    labels = list(at = intrv.lbl, cex = 1.1),
     font = list(family = "Source Sans Pro")
   ),
   xlab = NULL,
   ylab = NULL,
+  aspect.fill = T,
   par.settings = list(
     axis.text = list(fontfamily = "Source Sans Pro", cex = 1.2),
     axis.text = list(fontfamily = "Source Sans Pro", cex = 1.2),
@@ -195,7 +145,7 @@ levelplot(img %>% mask(sf.world %>% filter(COUNTRY == "Peru")),
 ) +
   latticeExtra::layer(
     sp.lines(sp.world, col = "black", lwd = 2),
-    # sp.lines(sp.dep, col = "black", lwd = .8),
+    # sp.lines(sp.dep, col = "black", lwd = .8)
     sp.points(sp.peru, pch = 20, cex = 1, col = "black"),
     sp.text(
       coordinates(sp.peru),
@@ -203,7 +153,12 @@ levelplot(img %>% mask(sf.world %>% filter(COUNTRY == "Peru")),
       fontfamily = "Source Sans Pro"
     )
   )
-}
 
 #' CLOSE THE SAVED OF PLOT
 dev.off()
+
+#' TRIM FIGURE
+img <- magick::image_read(name) %>% image_trim()
+
+#' SAVE FIGURE
+image_write(img, path = name, format = "png")
