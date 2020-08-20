@@ -1,3 +1,23 @@
+#' change months from english language to spanish language
+english.months <- c(
+  "january", "february", "march", "april", "may", "june", "july", "august",
+  "september", "october", "november", "december"
+)
+
+spanish.months <- c(
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto",
+  "Septiembre", "Octubre", "Noviembre", "Diciembre"
+)
+
+to.spanish <- spanish.months
+names(to.spanish) <- english.months
+
+translate.date <- function(date, output.lang = "es"){
+  if(output.lang == "es"){
+    str_replace_all(tolower(date), to.spanish)
+  }
+}
+
 #' this function obtains a binary number with a defined digits number "bits"
 binND <- function(number, nbits) { # number in binary system, nbits is digits number
   nzeros <- nbits - nchar(number)
