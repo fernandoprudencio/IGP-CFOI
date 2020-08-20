@@ -36,7 +36,12 @@ library(latticeExtra)
 library(rasterVis)
 library(maptools)
 library(grid)
+library(RCurl)
 library(magick)
+library(stringr)
+
+#' LOAD FUNCTIONS
+source("scripts/functions.R")
 
 #' CONSTANTS
 k.data <- file.choose()
@@ -48,7 +53,7 @@ k.dep <- c(
 )
 
 k.yr <- as.character(readline(prompt = "\nEnter year: \n"))
-k.mth <- as.character(readline(prompt = "\nEnter month: \n"))
+k.mth <- as.numeric(readline(prompt = "\nEnter month: \n"))
 
 #' DEFINE COLOR PALETTE
 if (grepl(k.data, pattern = "anom")) {
@@ -99,12 +104,20 @@ index <- raster(k.data) %>%
 #' PLOT
 if (grepl(k.data, pattern = "anom_gvmi")) {
   name <- "exports/anom_gvmi.png"
-  title <- sprintf("Anomalías de GVMI - %1$s %2$s", k.mth, k.yr)
+  title <- sprintf(
+    "Anomalías de GVMI - %1$s %2$s",
+    translate.date(month.name[k.mth]) %>% tolower(),
+    k.yr
+  )
   intrv <- seq(-.4, .4, .025)
   intrv.lbl <- seq(-.4, .4, .1)
 } else {
   name <- "exports/gvmi.png"
-  title <- sprintf("Condiciones de GVMI - %1$s %2$s", k.mth, k.yr)
+  title <- sprintf(
+    "Condiciones de GVMI - %1$s %2$s",
+    translate.date(month.name[k.mth]) %>% tolower(),
+    k.yr
+  )
   intrv <- c(-.1, seq(0, .5, .025))
   intrv.lbl <- c(-.1, seq(0, .5, .1))
 }
@@ -162,3 +175,23 @@ img <- magick::image_read(name) %>% image_trim()
 
 #' SAVE FIGURE
 image_write(img, path = name, format = "png")
+
+#' UPLOAD TO LAMAR SERVER
+path <- "/data/users/lamar/DATA/FIG_WEB_LAMAR/PROJECTS/FIRE_ANDES/GVMI"
+host <- "181.177.244.92"
+nam <- basename(name) %>% str_sub(1, -5)
+
+ftpUpload(
+  sprintf("exports/%s.png", nam),
+  sprintf("ftp://%1$s/%2$s/%3$s.png", host, path, nam),
+  userpwd = "amazonia:l@mar1044"
+)
+
+ftpUpload(
+  sprintf("exports/%s.png", nam),
+  sprintf(
+    "ftp://%1$s/%2$s/%4$s/%3$s/%4$s%5$02d_%3$s.png",
+    host, path, nam, k.yr, k.mth
+  ),
+  userpwd = "amazonia:l@mar1044"
+)
