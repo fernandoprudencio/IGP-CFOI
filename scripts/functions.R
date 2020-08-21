@@ -1,3 +1,21 @@
+#' INSTALL PACKAGES
+pkg <- c("tidyverse", "raster", "DescTools")
+
+sapply(
+  pkg,
+  function(x) {
+    is.there <- x %in% rownames(installed.packages())
+    if (is.there == FALSE) {
+      install.packages(x)
+    }
+  }
+)
+
+#' LOAD LIBRARIES
+library(tidyverse)
+library(raster)
+library(DescTools)
+
 #' change months from english language to spanish language
 english.months <- c(
   "january", "february", "march", "april", "may", "june", "july", "august",
@@ -74,7 +92,7 @@ indexMODIS <- function(index, redBand = NULL, nirBand = NULL,
     return((eta * (1 - (0.25 * eta))) - ((redBand - 0.125) / (1 - redBand)))
   }
   if (index == "ndwi") {
-    return((nirBand - swir1Band) / (nirBand + swir1Band))
+    return((nirBand - swir3Band) / (nirBand + swir3Band))
   }
   if (index == "vari") {
     return((greenBand - redBand) / (greenBand + redBand - blueBand))
