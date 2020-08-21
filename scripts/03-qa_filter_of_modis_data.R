@@ -12,7 +12,10 @@
 rm(list = ls())
 
 #' INSTALL PACKAGES
-pkg <- c("tidyverse", "raster", "rgdal", "foreach", "doParallel", "DescTools")
+pkg <- c(
+  "tidyverse", "raster", "rgdal", "foreach", "doParallel", "DescTools",
+  "filesstrings", "stringr"
+)
 
 sapply(
   pkg,
@@ -28,16 +31,14 @@ sapply(
 library(doParallel)
 library(foreach)
 library(tidyverse)
+library(filesstrings)
 
 #' LOAD FUNCTIONS
 source("scripts/functions.R")
 
-#' CONSTANTS
-k.year <- 2001
-
 #' FILE DATASET LINKS (INPUT AND OUTPUT)
-rut.in <- "data/raster/mod09a1/withoutFILTER/"
-rut.out <- "data/raster/mod09a1/withFILTER/"
+rut.in <- "data/raster/mod09a1/withoutFILTER"
+rut.out <- "data/raster/mod09a1/withFILTER"
 
 #' DESCRIPTION OF QUALITY BAND
 #'   This is the order of 16 bits of the quality band
@@ -62,7 +63,7 @@ filter <- list(
 
 #' LIST OF QA DATASET
 qa.list <- list.files(rut.in,
-  pattern = sprintf("state_500m_doy%s", k.year),
+  pattern = "state_500m",
   full.names = T
 )
 
@@ -73,7 +74,7 @@ use.cores <- detectCores() - 2
 for (j in 1:7) {
   #' list reflectivity datset
   band.list <- list.files(rut.in,
-    pattern = sprintf("refl_b0%s_doy%s", j, k.year),
+    pattern = sprintf("refl_b0%s_doy", j),
     full.names = T
   )
 
@@ -85,9 +86,10 @@ for (j in 1:7) {
   foreach(i = 1:length(qa.list)) %dopar% {
     #' load packages
     library(DescTools)
-    library(dplyr)
+    library(tidyverse)
     library(raster)
     library(rgdal)
+    library(stringr)
 
     file <- qaFilter(
       raster(band.list[i]),
@@ -96,14 +98,21 @@ for (j in 1:7) {
     )
 
     name <- band.list[i] %>%
-      strsplit("/") %>%
-      sapply("[", 5) %>%
-      substr(1, 35) %>%
+      basename() %>%
+      str_sub(1, -13) %>%
       sprintf(fmt = "%s_qafilter.tif")
 
-    writeRaster(file, sprintf("%s%s", rut.out, name), overwrite = T)
+    writeRaster(file, sprintf("%s/%s", rut.out, name), overwrite = T)
   }
 
   #' end cluster
   stopCluster(cluster)
 }
+
+#' MOVE FILES
+yr <- qa.list[1] %>%
+  basename() %>%
+  str_sub(36, 39)
+
+lst.files <- list.files(rut.in, "^.*\\.tif$", full.names = T)
+sapply(lst.files, FUN = file.move, sprintf("%s/%s", rut.in, yr))
