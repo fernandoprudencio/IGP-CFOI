@@ -27,14 +27,18 @@ sapply(
 #' LOAD PACKAGES
 library(doParallel)
 library(foreach)
+library(filesstrings)
 
 #' LOAD FUNCTIONS
 source("scripts/functions.R")
 
-#' LOAD REFERENCE RASTER
-ref <- raster(
-  "data/raster/index/gvmi_mod09a1/MOD09A1.006_sur_GVMI_doy2002033.tif"
-)
+#' BUILD A REFERENCE RASTER
+grd.ref <- raster(
+  nrow = 4441, ncol = 3176, xmn = -81.50417,
+  xmx = -68.27083, ymn = -18.4125, ymx = 0.09166667
+) %>%
+  "res<-"(0.004166667) %>%
+  "values<-"(0)
 
 #' FILE DATASET LINKS (INPUT)
 rut.in <- "data/raster/mod09a1/withFILTER"
@@ -66,38 +70,38 @@ foreach(i = 1:length(b1)) %dopar% {
   ndvi <- indexMODIS("ndvi",
     redBand = raster(b1[i]) / 10000,
     nirBand = raster(b2[i]) / 10000
-  ) %>% resample(ref) %>% "*"(10000)
+  ) %>% resample(grd.ref) %>% "*"(10000)
 
   ndwi <- indexMODIS("ndwi",
     nirBand = raster(b2[i]) / 10000,
     swir3Band = raster(b7[i]) / 10000
-  ) %>% resample(ref) %>% "*"(10000)
+  ) %>% resample(grd.ref) %>% "*"(10000)
 
   savi <- indexMODIS("savi",
     redBand = raster(b1[i]) / 10000,
     nirBand = raster(b2[i]) / 10000
-  ) %>% resample(ref) %>% "*"(10000)
+  ) %>% resample(grd.ref) %>% "*"(10000)
 
   evi <- indexMODIS("evi",
     blueBand = raster(b3[i]) / 10000,
     redBand = raster(b1[i]) / 10000,
     nirBand = raster(b2[i]) / 10000
-  ) %>% resample(ref) %>% "*"(10000)
+  ) %>% resample(grd.ref) %>% "*"(10000)
 
   ndii <- indexMODIS("ndii",
     nirBand = raster(b2[i]) / 10000,
     swir2Band = raster(b6[i]) / 10000
-  ) %>% resample(ref) %>% "*"(10000)
+  ) %>% resample(grd.ref) %>% "*"(10000)
 
   gemi <- indexMODIS("gemi",
     redBand = raster(b1[i]) / 10000,
     nirBand = raster(b2[i]) / 10000
-  ) %>% resample(ref) %>% "*"(10000)
+  ) %>% resample(grd.ref) %>% "*"(10000)
 
   gvmi <- indexMODIS("gvmi",
     nirBand = raster(b2[i]) / 10000,
     swir2Band = raster(b6[i]) / 10000
-  ) %>% resample(ref) %>% "*"(10000)
+  ) %>% resample(grd.ref) %>% "*"(10000)
 
   date <- basename(b1[i]) %>%
     str_sub(26, 35)
