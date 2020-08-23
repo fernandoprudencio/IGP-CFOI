@@ -640,7 +640,7 @@ plt.iv <- ggplot(df.end, aes(x = date, y = value, group = type)) +
   scale_x_date(
     limits = c(as.Date("2020-01-01"), as.Date("2020-12-31")),
     breaks = seq(as.Date("2020-01-01"), as.Date("2020-12-31"), by = "1 month"),
-    date_labels = "%b", expand = expand_scale(mult = c(.02, 0))
+    date_labels = "%b", expand = expansion(mult = c(.02, 0))
   ) +
   scale_y_continuous(
     breaks = seq(0, .3, .04),
